@@ -1,0 +1,7 @@
+Backend/target/
+Backend/data/
+Frontend/node_modules/
+Frontend/dist/
+.idea/
+.vscode/
+*.iml

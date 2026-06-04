@@ -1,0 +1,145 @@
+:root {
+  color: #172026;
+  background: #f4f6f2;
+  font-family: Inter, "Microsoft YaHei", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+.upload {
+  border: 1px solid #172026;
+  background: #172026;
+  color: white;
+  cursor: pointer;
+  padding: 10px 14px;
+}
+
+input,
+textarea {
+  border: 1px solid #c8d0c4;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 12px;
+  width: 100%;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.shell {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 32px;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  color: #68746a;
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+.upload input {
+  display: none;
+}
+
+.grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 300px 1fr;
+}
+
+.panel {
+  background: white;
+  border: 1px solid #dde4d9;
+  padding: 20px;
+}
+
+.doc {
+  border: 1px solid #dde4d9;
+  cursor: pointer;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.doc span {
+  color: #68746a;
+  display: block;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.doc.active {
+  border-color: #172026;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.tabs button {
+  background: white;
+  color: #172026;
+}
+
+.tabs button.active {
+  background: #172026;
+  color: white;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.result,
+.answer {
+  border-left: 3px solid #477a5b;
+  background: #f8faf7;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.result p {
+  color: #344039;
+  max-height: 150px;
+  overflow: auto;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 18px;
+  }
+
+  .toolbar,
+  .grid {
+    display: block;
+  }
+
+  .upload {
+    display: inline-block;
+    margin-top: 16px;
+  }
+
+  .workbench {
+    margin-top: 16px;
+  }
+}
