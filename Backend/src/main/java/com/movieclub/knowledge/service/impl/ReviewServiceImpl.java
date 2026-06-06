@@ -60,7 +60,7 @@ public class ReviewServiceImpl implements ReviewService {
         report.setKeyPoints(output);
         report.setQuestions(output);
         report.setImprovementAdvice(output);
-        report.setCreatedAt(LocalDateTime.now());
+        report.setCreateTime(LocalDateTime.now());
         reportMapper.insert(report);
         return report;
     }

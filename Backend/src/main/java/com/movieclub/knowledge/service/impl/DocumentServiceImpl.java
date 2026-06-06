@@ -62,18 +62,18 @@ public class DocumentServiceImpl implements DocumentService {
         LocalDateTime now = LocalDateTime.now();
         Document document = new Document();
         document.setTitle(stripExtension(originalFilename));
-        document.setOriginalFilename(originalFilename);
+        document.setOriginalFileName(originalFilename);
         document.setFileType(fileType);
         document.setFileSize(file.getSize());
-        document.setStoragePath(savedPath.toString());
+        document.setFilePath(savedPath.toString());
         document.setParseStatus("PENDING");
-        document.setCreatedAt(now);
-        document.setUpdatedAt(now);
+        document.setCreateTime(now);
+        document.setUpdateTime(now);
         documentMapper.insert(document);
 
         try {
             document.setParseStatus("PROCESSING");
-            document.setUpdatedAt(LocalDateTime.now());
+            document.setUpdateTime(LocalDateTime.now());
             documentMapper.updateById(document);
             ParsedDocument parsed = parser.parse(savedPath);
             if (!StringUtils.hasText(parsed.content())) {
@@ -88,19 +88,19 @@ public class DocumentServiceImpl implements DocumentService {
                 chunk.setPositionHint("chunk-" + i);
                 chunk.setEmbedding(embeddingService.embedAsJson(chunks.get(i)));
                 chunk.setTokenCount(estimateTokens(chunks.get(i)));
-                chunk.setCreatedAt(LocalDateTime.now());
+                chunk.setCreateTime(LocalDateTime.now());
                 chunkMapper.insert(chunk);
             }
             document.setSummary(parsed.content().substring(0, Math.min(parsed.content().length(), 500)));
             document.setParseStatus("COMPLETED");
-            document.setUpdatedAt(LocalDateTime.now());
+            document.setUpdateTime(LocalDateTime.now());
             documentMapper.updateById(document);
             return document;
         } catch (Exception e) {
             chunkMapper.delete(new LambdaQueryWrapper<DocumentChunk>().eq(DocumentChunk::getDocumentId, document.getId()));
             document.setParseStatus("FAILED");
             document.setErrorMessage(e.getMessage());
-            document.setUpdatedAt(LocalDateTime.now());
+            document.setUpdateTime(LocalDateTime.now());
             documentMapper.updateById(document);
             throw new BusinessException("文档解析失败：" + e.getMessage());
         }
@@ -108,7 +108,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public List<Document> list() {
-        return documentMapper.selectList(new LambdaQueryWrapper<Document>().orderByDesc(Document::getCreatedAt));
+        return documentMapper.selectList(new LambdaQueryWrapper<Document>().orderByDesc(Document::getCreateTime));
     }
 
     @Override

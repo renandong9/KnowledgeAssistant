@@ -15,5 +15,5 @@ public class ReviewReport {
     private String keyPoints;
     private String questions;
     private String improvementAdvice;
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 }

@@ -47,7 +47,7 @@ public class ChatServiceImpl implements ChatService {
         saveMessage(session.getId(), "user", request.getQuestion(), null);
         String answer = ragService.answer(request.getQuestion(), references);
         saveMessage(session.getId(), "assistant", answer, toJson(references));
-        session.setUpdatedAt(LocalDateTime.now());
+        session.setUpdateTime(LocalDateTime.now());
         sessionMapper.updateById(session);
         return new ChatResponse(session.getId(), answer, references);
     }
@@ -62,8 +62,8 @@ public class ChatServiceImpl implements ChatService {
         ChatSession session = new ChatSession();
         String title = request.getQuestion().length() > 30 ? request.getQuestion().substring(0, 30) : request.getQuestion();
         session.setTitle(title);
-        session.setCreatedAt(LocalDateTime.now());
-        session.setUpdatedAt(LocalDateTime.now());
+        session.setCreateTime(LocalDateTime.now());
+        session.setUpdateTime(LocalDateTime.now());
         sessionMapper.insert(session);
         return session;
     }
@@ -74,7 +74,7 @@ public class ChatServiceImpl implements ChatService {
         message.setRole(role);
         message.setContent(content);
         message.setReferencesJson(referencesJson);
-        message.setCreatedAt(LocalDateTime.now());
+        message.setCreateTime(LocalDateTime.now());
         messageMapper.insert(message);
     }
 

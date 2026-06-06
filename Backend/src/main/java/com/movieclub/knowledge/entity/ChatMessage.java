@@ -13,5 +13,5 @@ public class ChatMessage {
     private String role;
     private String content;
     private String referencesJson;
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 }

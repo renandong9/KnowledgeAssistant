@@ -17,7 +17,7 @@ public class ArxivClient {
         paper.setAbstractText("Semantic Scholar 不可用时的降级占位结果。请稍后扩展 arXiv XML 解析。");
         paper.setUrl("https://arxiv.org/search/?query=" + query.replace(" ", "+") + "&searchtype=all");
         paper.setReason("Semantic Scholar 请求失败后的 arXiv 检索入口。");
-        paper.setCreatedAt(LocalDateTime.now());
+        paper.setCreateTime(LocalDateTime.now());
         return List.of(paper);
     }
 }

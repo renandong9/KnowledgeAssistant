@@ -50,7 +50,7 @@ public class SemanticScholarClient {
                     .map(author -> String.valueOf(value((Map<?, ?>) author, "name")))
                     .collect(Collectors.joining(", ")));
             paper.setReason("与检索主题相关：" + query);
-            paper.setCreatedAt(LocalDateTime.now());
+            paper.setCreateTime(LocalDateTime.now());
             papers.add(paper);
         }
         return papers;

@@ -1,15 +1,17 @@
 CREATE TABLE IF NOT EXISTS documents (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(255) NOT NULL,
-  original_filename VARCHAR(255) NOT NULL,
+  original_file_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
   file_type VARCHAR(20) NOT NULL,
   file_size BIGINT NOT NULL,
-  storage_path VARCHAR(500) NOT NULL,
   parse_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
   summary TEXT NULL,
   error_message TEXT NULL,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL
+  create_time DATETIME NOT NULL,
+  update_time DATETIME NOT NULL,
+  INDEX idx_documents_create_time (create_time),
+  INDEX idx_documents_parse_status (parse_status)
 );
 
 CREATE TABLE IF NOT EXISTS document_chunks (
@@ -21,7 +23,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
   position_hint VARCHAR(100) NULL,
   embedding MEDIUMTEXT NULL,
   token_count INT NULL,
-  created_at DATETIME NOT NULL,
+  create_time DATETIME NOT NULL,
   INDEX idx_document_chunks_document_id (document_id),
   FULLTEXT INDEX ft_document_chunks_content (content),
   CONSTRAINT fk_chunks_document
@@ -32,8 +34,9 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(255) NOT NULL,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL
+  create_time DATETIME NOT NULL,
+  update_time DATETIME NOT NULL,
+  INDEX idx_chat_sessions_update_time (update_time)
 );
 
 CREATE TABLE IF NOT EXISTS chat_messages (
@@ -42,8 +45,9 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   role VARCHAR(20) NOT NULL,
   content MEDIUMTEXT NOT NULL,
   references_json JSON NULL,
-  created_at DATETIME NOT NULL,
+  create_time DATETIME NOT NULL,
   INDEX idx_chat_messages_session_id (session_id),
+  INDEX idx_chat_messages_create_time (create_time),
   CONSTRAINT fk_messages_session
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
     ON DELETE CASCADE
@@ -57,7 +61,7 @@ CREATE TABLE IF NOT EXISTS review_reports (
   key_points MEDIUMTEXT NULL,
   questions MEDIUMTEXT NULL,
   improvement_advice MEDIUMTEXT NULL,
-  created_at DATETIME NOT NULL,
+  create_time DATETIME NOT NULL,
   INDEX idx_review_reports_document_id (document_id)
 );
 
@@ -71,6 +75,6 @@ CREATE TABLE IF NOT EXISTS paper_recommendations (
   abstract_text MEDIUMTEXT NULL,
   url VARCHAR(1000) NULL,
   reason MEDIUMTEXT NULL,
-  created_at DATETIME NOT NULL,
+  create_time DATETIME NOT NULL,
   INDEX idx_paper_query (query_text)
 );

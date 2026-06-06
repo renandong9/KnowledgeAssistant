@@ -10,6 +10,6 @@ import java.time.LocalDateTime;
 public class ChatSession {
     private Long id;
     private String title;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

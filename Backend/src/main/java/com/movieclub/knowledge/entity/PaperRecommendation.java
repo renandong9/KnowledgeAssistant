@@ -17,5 +17,5 @@ public class PaperRecommendation {
     private String abstractText;
     private String url;
     private String reason;
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 }

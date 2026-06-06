@@ -16,5 +16,5 @@ public class DocumentChunk {
     private String positionHint;
     private String embedding;
     private Integer tokenCount;
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 }

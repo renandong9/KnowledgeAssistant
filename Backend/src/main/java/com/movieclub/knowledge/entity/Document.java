@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 public class Document {
     private Long id;
     private String title;
-    private String originalFilename;
+    private String originalFileName;
+    private String filePath;
     private String fileType;
     private Long fileSize;
-    private String storagePath;
     private String parseStatus;
     private String summary;
     private String errorMessage;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

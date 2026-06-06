@@ -1,5 +1,6 @@
 Backend/target/
 Backend/data/
+Backend/.m2/
 Frontend/node_modules/
 Frontend/dist/
 .idea/
