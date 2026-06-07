@@ -1,126 +1,139 @@
 # Knowledge Assistant
 
-Knowledge Assistant 是一个个人知识库助手项目，用于上传和解析文档，基于文档内容进行检索、问答、学习复盘，并提供论文推荐入口。
+Knowledge Assistant 是一个面向论文和科研文章的 AI 科研知识助手。项目目标是让用户上传一篇 PDF、DOCX、TXT 或 Markdown 文档后，系统自动完成文档解析、Chunk 切分、AI 分析、相关论文推荐，并支持围绕同一篇文章创建多个独立主题问答窗口。
 
-## 功能概览
+## 当前功能
 
-- 文档上传：支持 PDF、DOCX、Markdown、TXT 文件。
-- 文档解析：提取文本内容并切分为知识片段。
-- 知识检索：根据问题或关键词检索相关文档片段。
-- 知识库问答：结合检索结果调用大模型生成回答。
-- 学习复盘：基于文档内容生成总结、知识点、复习问题和改进建议。
-- 论文推荐：根据研究主题检索 Semantic Scholar，失败时提供 arXiv 检索入口。
+- 文档上传：支持 PDF、DOCX、TXT、Markdown。
+- 文档解析：保存文档元数据，提取文本并切分为 DocumentChunk。
+- OCR：已接入 Tess4J 配置，默认关闭；普通文本 PDF 不依赖 OCR。
+- AI 分析：通过本地 Ollama 生成研究背景、问题定义、核心方法、实验结果、创新点、优缺点和一句话总结。
+- 多主题问答：每篇 Document 可以创建多个 ChatSession，每个窗口保存独立 ChatMessage 历史。
+- RAG 问答：限定当前 Document 检索，结合 ChatSession 标题辅助召回，回答基于原文 Chunk。
+- 相关论文推荐：接入 Semantic Scholar，失败时不影响主流程。
+- 前端工作区：初始上传卡片，上传后进入 Document Workspace，展示分析结果、推荐论文和多主题问答区。
 
 ## 技术栈
 
-### Backend
+后端：
 
 - Java 17
 - Spring Boot 3
 - MyBatis-Plus
 - MySQL
-- Redis
 - PDFBox
 - Apache POI
+- Tess4J
 - Ollama
 
-### Frontend
+前端：
 
 - Vue 3
 - Vite
 - Axios
 
-## 项目结构
+## 环境要求
 
-```text
-Knowledge Assistant/
-├── Backend/                  # Spring Boot 后端
-│   ├── src/main/java/        # 后端业务代码
-│   ├── src/main/resources/   # 配置文件和数据库脚本
-│   └── pom.xml
-├── Frontend/                 # Vue 前端
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.js
-└── README.md
+- MySQL 已启动，并创建数据库 `knowledge_assistant`。
+- Ollama 已启动，默认地址为 `http://localhost:11434`。
+- 本地已拉取模型 `deepseek-r1:1.5b`。
+- 如需扫描版 PDF OCR，需要额外安装 Tesseract 和对应语言包。
+
+## 配置
+
+后端敏感配置通过环境变量读取，不要提交真实账号密码。
+
+```powershell
+$env:MYSQL_USERNAME="root"
+$env:MYSQL_PASSWORD="your_mysql_password"
+$env:OLLAMA_BASE_URL="http://localhost:11434"
+$env:OLLAMA_MODEL="deepseek-r1:1.5b"
 ```
 
-## 数据库
+后端端口默认 `8080`，可通过环境变量覆盖：
 
-默认数据库名：
-
-```sql
-knowledge_assistant
+```powershell
+$env:SERVER_PORT="18080"
 ```
 
-初始化表结构：
+前端代理默认指向 `http://localhost:8080`，可通过环境变量覆盖：
 
-```bash
+```powershell
+$env:VITE_API_TARGET="http://localhost:18080"
+```
+
+可参考：
+
+- `Backend/src/main/resources/application-example.yml`
+- `Frontend/.env.example`
+
+## 数据库初始化
+
+```powershell
 mysql -u root -p knowledge_assistant < Backend/src/main/resources/schema.sql
 ```
 
-核心表包括：
+核心表：
 
 - `documents`
 - `document_chunks`
+- `paper_analysis`
+- `paper_recommendations`
 - `chat_sessions`
 - `chat_messages`
-- `review_reports`
-- `paper_recommendations`
-
-## 环境变量
-
-后端通过环境变量读取敏感配置：
-
-```bash
-MYSQL_USERNAME=root
-MYSQL_PASSWORD=your_mysql_password
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=deepseek-r1:1.5b
-```
-
-默认使用本地 Ollama，不需要 API Key。请先确认 Ollama 已启动，并且本地已拉取 `deepseek-r1:1.5b` 模型。
 
 ## 启动后端
 
-```bash
-cd Backend
-mvn clean compile
-mvn spring-boot:run
+使用默认端口 `8080`：
+
+```powershell
+.\scripts\start-backend.ps1
 ```
 
-默认后端地址：
+如果 `8080` 被占用，可临时使用 `18080`：
 
-```text
-http://localhost:8080
+```powershell
+.\scripts\start-backend.ps1 -Port 18080 -MysqlPassword your_mysql_password
 ```
 
 ## 启动前端
 
-```bash
-cd Frontend
-npm install
-npm run dev
+后端使用默认 `8080` 时：
+
+```powershell
+.\scripts\start-frontend.ps1
 ```
 
-默认前端地址：
+后端使用 `18080` 时：
+
+```powershell
+.\scripts\start-frontend.ps1 -BackendUrl http://localhost:18080
+```
+
+前端访问地址：
 
 ```text
 http://localhost:5173
 ```
 
-## 主要接口
+## 常用验证
 
-- `POST /api/documents/upload`
-- `GET /api/documents`
-- `GET /api/documents/{id}`
-- `DELETE /api/documents/{id}`
-- `POST /api/ai/chat`
-- `POST /api/search`
-- `POST /api/chat`
-- `POST /api/review/summary`
-- `POST /api/papers/recommend`
+后端编译：
 
-## 当前状态
+```powershell
+cd Backend
+mvn clean compile
+```
 
-项目已经具备个人知识库助手的基础闭环：文档入库、文本切片、基础检索、RAG 问答、复盘报告和论文推荐。后续可以继续增强检索质量、聊天历史页面、用户体系、真实向量数据库和部署配置。
+前端构建：
+
+```powershell
+cd Frontend
+npm run build
+```
+
+## 配置安全
+
+- `application.yml` 使用环境变量占位，不提交真实密码或 API Key。
+- `Frontend/.env` 已加入忽略列表，只提交 `Frontend/.env.example`。
+- 外部推荐服务或官方 API Key 统一通过环境变量读取。

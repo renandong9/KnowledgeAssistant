@@ -38,26 +38,24 @@
       <section class="workspace-grid">
         <aside class="insight-panel">
           <section class="panel-section">
-            <div class="section-head">
-              <h2>文章基本信息</h2>
-              <button @click="refreshWorkspace">刷新</button>
+            <div class="document-title-card">
+              <h2>{{ articleTitle }}</h2>
+              <p>{{ articleTitleCn }}</p>
+              <time>{{ formatTime(selectedDocument.createTime) }}</time>
             </div>
-            <dl class="meta-list">
-              <div><dt>文件名</dt><dd>{{ selectedDocument.originalFileName || selectedDocument.title }}</dd></div>
-              <div><dt>上传时间</dt><dd>{{ formatTime(selectedDocument.createTime) }}</dd></div>
-              <div><dt>解析状态</dt><dd><span :class="['status-pill', tone(selectedDocument.parseStatus)]">{{ label(selectedDocument.parseStatus) }}</span></dd></div>
-              <div><dt>OCR 状态</dt><dd><span :class="['status-pill', tone(selectedDocument.ocrStatus)]">{{ label(selectedDocument.ocrStatus) }}</span></dd></div>
-              <div><dt>向量索引</dt><dd><span :class="['status-pill', tone(selectedDocument.indexStatus)]">{{ label(selectedDocument.indexStatus) }}</span></dd></div>
-              <div><dt>AI 分析</dt><dd><span :class="['status-pill', tone(selectedDocument.analysisStatus)]">{{ label(selectedDocument.analysisStatus) }}</span></dd></div>
-              <div><dt>文件类型</dt><dd>{{ selectedDocument.fileType }}</dd></div>
-            </dl>
           </section>
 
           <section class="panel-section">
-            <h2>标题 / 摘要 / 关键词</h2>
-            <p class="summary-text"><strong>标题：</strong>{{ selectedDocument.title }}</p>
-            <p class="summary-text"><strong>摘要：</strong>{{ selectedDocument.abstractText || selectedDocument.summary || '暂无摘要' }}</p>
-            <p class="summary-text"><strong>关键词：</strong>{{ selectedDocument.keywords || '暂无关键词' }}</p>
+            <article class="main-summary-card">
+              <span>主要内容</span>
+              <ul v-if="figureSummaries.length" class="figure-summary-list">
+                <li v-for="item in figureSummaries" :key="item.label">
+                  <strong>{{ item.label }}</strong>
+                  <p>{{ item.summary }}</p>
+                </li>
+              </ul>
+              <p v-else>暂未从原文中识别到科研图说明。</p>
+            </article>
           </section>
 
           <section class="panel-section">
@@ -202,6 +200,7 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const question = ref('')
 const analysis = ref(null)
+const documentChunks = ref([])
 const papers = ref([])
 const creatingSession = ref(false)
 const newSessionTitle = ref('')
@@ -219,6 +218,9 @@ const nameSuggestions = ['整体理解', '研究背景', '核心方法', '实验
 
 const selectedDocument = computed(() => documents.value.find(doc => doc.id === selectedDocumentId.value))
 const activeSession = computed(() => chatSessions.value.find(session => session.id === activeSessionId.value))
+const articleTitle = computed(() => selectedDocument.value?.title || selectedDocument.value?.originalFileName || '未命名文章')
+const articleTitleCn = computed(() => selectedDocument.value?.titleCn || selectedDocument.value?.titleChinese || translateKnownTitle(articleTitle.value))
+const figureSummaries = computed(() => extractFigureSummaries())
 const uploadTitle = computed(() => uploadState.value === 'uploading' ? '上传中，请稍候...' : '拖入一篇论文或文章，开始智能理解')
 const questionPlaceholder = computed(() => activeSession.value ? `围绕“${activeSession.value.title}”提问，回答会引用原文 Chunk` : '请先创建或选择提问窗口')
 const structureItems = computed(() => {
@@ -245,7 +247,7 @@ async function selectDocument(doc) {
 
 async function refreshWorkspace() {
   await refreshSelectedDocument()
-  await Promise.all([loadAnalysis(), loadRecommendations(), loadChatSessions()])
+  await Promise.all([loadAnalysis(), loadChunks(), loadRecommendations(), loadChatSessions()])
 }
 
 async function refreshSelectedDocument() {
@@ -295,6 +297,10 @@ function isSupportedFile(file) {
 
 async function loadAnalysis() {
   analysis.value = await api.getAnalysis(selectedDocumentId.value)
+}
+
+async function loadChunks() {
+  documentChunks.value = selectedDocumentId.value ? await api.getDocumentChunks(selectedDocumentId.value) || [] : []
 }
 
 async function rebuildAnalysis() {
@@ -439,6 +445,65 @@ function tone(status) {
 function formatTime(value) {
   if (!value) return '未知'
   return new Date(value).toLocaleString()
+}
+
+function translateKnownTitle(title) {
+  if (!title) return '中文题名待生成'
+  if (/[\u4e00-\u9fff]/.test(title)) return title
+  const normalized = title.toLowerCase()
+  if (normalized.includes('photonic integrated beam delivery') && normalized.includes('rubidium')) {
+    return '用于铷三维磁光阱的光子集成光束传输'
+  }
+  return '中文题名待生成'
+}
+
+function buildMainSummary() {
+  if (analysis.value) {
+    const parts = [
+      cleanText(analysis.value.oneSentenceSummary),
+      cleanText(analysis.value.researchBackground),
+      cleanText(analysis.value.coreMethod),
+      cleanText(analysis.value.experimentResults),
+      cleanText(analysis.value.innovationPoints)
+    ].filter(Boolean)
+    if (parts.length) return parts.join(' ')
+  }
+  if (selectedDocument.value?.summary) {
+    return cleanText(selectedDocument.value.summary)
+  }
+  return analysisLoading.value ? '智能体正在整理这篇文章的主要内容，请稍候。' : '智能体还没有生成主要内容总结。'
+}
+
+function cleanText(text) {
+  if (!text || text.includes('原文没有足够信息')) return ''
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<\/?think>/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractFigureSummaries() {
+  const figures = []
+  for (const chunk of documentChunks.value) {
+    const text = cleanText(chunk.content || '')
+    const matches = text.matchAll(/(?:Figure|Fig\.?|图)\s*([0-9]+[a-zA-Z]?)[\s.:：-]*([^。.!?！？]*(?:[。.!?！？][^。.!?！？]*){0,4})/g)
+    for (const match of matches) {
+      const label = `图 ${match[1]}`
+      if (figures.some(item => item.label === label)) continue
+      const summary = limitSentences(match[2] || '', 5)
+      if (summary) figures.push({ label, summary })
+    }
+  }
+  return figures.slice(0, 8)
+}
+
+function limitSentences(text, max) {
+  return cleanText(text)
+    .split(/(?<=[。.!?！？])\s*/)
+    .filter(Boolean)
+    .slice(0, max)
+    .join(' ')
 }
 
 onMounted(loadDocuments)

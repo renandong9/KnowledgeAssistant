@@ -3,6 +3,10 @@ Backend/data/
 Backend/.m2/
 Frontend/node_modules/
 Frontend/dist/
+Frontend/build-check/
+Frontend/.env
 .idea/
 .vscode/
+.codex/
 *.iml
+*.log

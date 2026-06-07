@@ -173,6 +173,39 @@ h2 {
   padding-bottom: 0;
 }
 
+.document-title-card {
+  background: #fffdf7;
+  border: 1px solid #f0e4c7;
+  display: grid;
+  gap: 10px;
+  min-height: 160px;
+  padding: 18px;
+  position: relative;
+}
+
+.document-title-card h2 {
+  color: #273329;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.document-title-card p {
+  color: #6b756b;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+
+.document-title-card time {
+  bottom: 14px;
+  color: #9a8f77;
+  font-size: 12px;
+  position: absolute;
+  right: 16px;
+}
+
 .meta-list {
   display: grid;
   gap: 10px;
@@ -234,6 +267,48 @@ h2 {
   line-height: 1.65;
   margin: 0;
   white-space: pre-wrap;
+}
+
+.main-summary-card {
+  background: #f8fcf7;
+  border: 1px solid #dcebd7;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.main-summary-card span {
+  color: #4d7d5c;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.main-summary-card p {
+  color: #2f3e35;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.figure-summary-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.figure-summary-list li {
+  background: #fffdf8;
+  border: 1px solid #e8efd9;
+  padding: 12px;
+}
+
+.figure-summary-list strong {
+  color: #6a8d55;
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
 }
 
 .structure-list {

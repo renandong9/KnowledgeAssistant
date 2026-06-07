@@ -17,6 +17,7 @@ export const api = {
   listDocuments: () => unwrap(http.get('/documents')),
   getDocument: id => unwrap(http.get(`/documents/${id}`)),
   getDocumentStatus: id => unwrap(http.get(`/documents/${id}/status`)),
+  getDocumentChunks: id => unwrap(http.get(`/documents/${id}/chunks`)),
   uploadDocument: form => unwrap(http.post('/documents/upload', form)),
   getAnalysis: documentId => unwrap(http.get(`/documents/${documentId}/analysis`)),
   rebuildAnalysis: documentId => unwrap(http.post(`/documents/${documentId}/analysis/rebuild`)),
