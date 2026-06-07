@@ -29,10 +29,19 @@ mybatis-plus:
       id-type: auto
 
 knowledge:
-  storage-dir: ./data/uploads
+  storage-dir: ${KNOWLEDGE_STORAGE_DIR:./data/uploads}
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
     model: ${OLLAMA_MODEL:deepseek-r1:1.5b}
+    embedding-model: ${OLLAMA_EMBEDDING_MODEL:}
+  ocr:
+    enabled: ${OCR_ENABLED:false}
+    provider: ${OCR_PROVIDER:tess4j}
+    tesseract-data-path: ${TESSDATA_PREFIX:}
+    language: ${OCR_LANGUAGE:eng}
+    dpi: ${OCR_DPI:200}
+    max-pages: ${OCR_MAX_PAGES:20}
   paper:
-    semantic-scholar-url: https://api.semanticscholar.org/graph/v1
-    arxiv-url: https://export.arxiv.org/api/query
+    semantic-scholar-url: ${SEMANTIC_SCHOLAR_URL:https://api.semanticscholar.org/graph/v1}
+    semantic-scholar-api-key: ${SEMANTIC_SCHOLAR_API_KEY:}
+    arxiv-url: ${ARXIV_URL:https://export.arxiv.org/api/query}

@@ -1,5 +1,6 @@
 package com.movieclub.knowledge.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movieclub.knowledge.ai.RagService;
 import com.movieclub.knowledge.common.BusinessException;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -53,8 +55,9 @@ public class ChatServiceImpl implements ChatService {
         searchRequest.setTopic(session.getTitle());
         searchRequest.setLimit(request.getLimit());
         List<SearchResult> references = searchService.search(searchRequest);
+        List<ChatMessage> history = loadRecentHistory(session.getId());
         saveMessage(session.getId(), "user", request.getQuestion(), null);
-        String answer = ragService.answer(request.getQuestion(), session.getTitle(), references);
+        String answer = ragService.answer(request.getQuestion(), session.getTitle(), references, history);
         saveMessage(session.getId(), "assistant", answer, toJson(references));
         session.setUpdateTime(LocalDateTime.now());
         sessionMapper.updateById(session);
@@ -95,6 +98,16 @@ public class ChatServiceImpl implements ChatService {
         message.setReferencesJson(referencesJson);
         message.setCreateTime(LocalDateTime.now());
         messageMapper.insert(message);
+    }
+
+    private List<ChatMessage> loadRecentHistory(Long sessionId) {
+        return messageMapper.selectList(new LambdaQueryWrapper<ChatMessage>()
+                        .eq(ChatMessage::getSessionId, sessionId)
+                        .orderByDesc(ChatMessage::getCreateTime)
+                        .last("LIMIT 8"))
+                .stream()
+                .sorted(Comparator.comparing(ChatMessage::getCreateTime))
+                .toList();
     }
 
     private String toJson(Object value) {

@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @TableName("paper_recommendations")
 public class PaperRecommendation {
     private Long id;
+    private Long documentId;
     private String source;
     private String queryText;
     private String title;

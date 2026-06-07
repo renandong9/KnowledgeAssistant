@@ -8,9 +8,13 @@ import com.movieclub.knowledge.entity.Document;
 import com.movieclub.knowledge.entity.DocumentChunk;
 import com.movieclub.knowledge.mapper.DocumentChunkMapper;
 import com.movieclub.knowledge.mapper.DocumentMapper;
+import com.movieclub.knowledge.ocr.OcrResult;
+import com.movieclub.knowledge.ocr.OcrService;
 import com.movieclub.knowledge.parser.DocumentParser;
 import com.movieclub.knowledge.parser.ParsedDocument;
 import com.movieclub.knowledge.service.DocumentService;
+import com.movieclub.knowledge.service.PaperAnalysisService;
+import com.movieclub.knowledge.service.PaperService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -34,20 +38,30 @@ public class DocumentServiceImpl implements DocumentService {
     private final List<DocumentParser> parsers;
     private final KnowledgeProperties properties;
     private final EmbeddingService embeddingService;
+    private final OcrService ocrService;
+    private final PaperAnalysisService paperAnalysisService;
+    private final PaperService paperService;
 
     public DocumentServiceImpl(DocumentMapper documentMapper,
                                DocumentChunkMapper chunkMapper,
                                List<DocumentParser> parsers,
                                KnowledgeProperties properties,
-                               EmbeddingService embeddingService) {
+                               EmbeddingService embeddingService,
+                               OcrService ocrService,
+                               PaperAnalysisService paperAnalysisService,
+                               PaperService paperService) {
         this.documentMapper = documentMapper;
         this.chunkMapper = chunkMapper;
         this.parsers = parsers;
         this.properties = properties;
         this.embeddingService = embeddingService;
+        this.ocrService = ocrService;
+        this.paperAnalysisService = paperAnalysisService;
+        this.paperService = paperService;
     }
 
     @Override
+    @Transactional
     public Document upload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("上传文件不能为空");
@@ -59,50 +73,39 @@ public class DocumentServiceImpl implements DocumentService {
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("暂不支持的文件类型：" + fileType));
         Path savedPath = saveFile(file, fileType);
-        LocalDateTime now = LocalDateTime.now();
-        Document document = new Document();
-        document.setTitle(stripExtension(originalFilename));
-        document.setOriginalFileName(originalFilename);
-        document.setFileType(fileType);
-        document.setFileSize(file.getSize());
-        document.setFilePath(savedPath.toString());
-        document.setParseStatus("PENDING");
-        document.setCreateTime(now);
-        document.setUpdateTime(now);
-        documentMapper.insert(document);
+        Document document = createPendingDocument(file, originalFilename, fileType, savedPath);
 
         try {
-            document.setParseStatus("PROCESSING");
-            document.setUpdateTime(LocalDateTime.now());
-            documentMapper.updateById(document);
+            updateStatuses(document, "PROCESSING", "PENDING", "PENDING", "PENDING", null);
             ParsedDocument parsed = parser.parse(savedPath);
-            if (!StringUtils.hasText(parsed.content())) {
-                throw new BusinessException("文档没有可提取文本，扫描版 PDF 可能需要 OCR");
+            String content = parsed.content();
+            if (!StringUtils.hasText(content)) {
+                OcrResult ocrResult = ocrService.recognize(savedPath, fileType);
+                if (ocrResult.success() && StringUtils.hasText(ocrResult.text())) {
+                    content = ocrResult.text();
+                    document.setOcrStatus("COMPLETED");
+                } else if (ocrResult.attempted()) {
+                    document.setOcrStatus("FAILED");
+                    throw new BusinessException("扫描版 PDF OCR 失败：" + ocrResult.message());
+                } else {
+                    document.setOcrStatus("SKIPPED");
+                    throw new BusinessException("文档没有可提取文本；扫描版 PDF 需要配置 OCR。");
+                }
+            } else {
+                document.setOcrStatus("NOT_REQUIRED");
             }
-            List<String> chunks = split(parsed.content());
-            for (int i = 0; i < chunks.size(); i++) {
-                DocumentChunk chunk = new DocumentChunk();
-                chunk.setDocumentId(document.getId());
-                chunk.setChunkIndex(i);
-                chunk.setContent(chunks.get(i));
-                chunk.setPositionHint("chunk-" + i);
-                chunk.setEmbedding(embeddingService.embedAsJson(chunks.get(i)));
-                chunk.setTokenCount(estimateTokens(chunks.get(i)));
-                chunk.setCreateTime(LocalDateTime.now());
-                chunkMapper.insert(chunk);
-            }
-            document.setSummary(parsed.content().substring(0, Math.min(parsed.content().length(), 500)));
-            document.setParseStatus("COMPLETED");
-            document.setUpdateTime(LocalDateTime.now());
-            documentMapper.updateById(document);
-            return document;
+            persistChunks(document, content);
+            document.setTitle(extractTitle(document, content));
+            document.setAbstractText(extractAbstract(content));
+            document.setKeywords(extractKeywords(content));
+            document.setSummary(content.substring(0, Math.min(content.length(), 500)));
+            updateStatuses(document, "COMPLETED", document.getOcrStatus(), "COMPLETED", "PROCESSING", null);
+            runPostProcessing(document.getId());
+            return documentMapper.selectById(document.getId());
         } catch (Exception e) {
             chunkMapper.delete(new LambdaQueryWrapper<DocumentChunk>().eq(DocumentChunk::getDocumentId, document.getId()));
-            document.setParseStatus("FAILED");
-            document.setErrorMessage(e.getMessage());
-            document.setUpdateTime(LocalDateTime.now());
-            documentMapper.updateById(document);
-            throw new BusinessException("文档解析失败：" + e.getMessage());
+            updateStatuses(document, "FAILED", document.getOcrStatus(), "FAILED", "FAILED", e.getMessage());
+            throw new BusinessException("文档处理失败：" + e.getMessage());
         }
     }
 
@@ -124,6 +127,78 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public void delete(Long id) {
         documentMapper.deleteById(id);
+    }
+
+    private Document createPendingDocument(MultipartFile file, String originalFilename, String fileType, Path savedPath) {
+        LocalDateTime now = LocalDateTime.now();
+        Document document = new Document();
+        document.setTitle(stripExtension(originalFilename));
+        document.setOriginalFileName(originalFilename);
+        document.setFileType(fileType);
+        document.setFileSize(file.getSize());
+        document.setFilePath(savedPath.toString());
+        document.setParseStatus("PENDING");
+        document.setOcrStatus("PENDING");
+        document.setIndexStatus("PENDING");
+        document.setAnalysisStatus("PENDING");
+        document.setRecommendationStatus("PENDING");
+        document.setCreateTime(now);
+        document.setUpdateTime(now);
+        documentMapper.insert(document);
+        return document;
+    }
+
+    private void persistChunks(Document document, String content) {
+        document.setIndexStatus("PROCESSING");
+        document.setUpdateTime(LocalDateTime.now());
+        documentMapper.updateById(document);
+        List<String> chunks = split(content);
+        for (int i = 0; i < chunks.size(); i++) {
+            DocumentChunk chunk = new DocumentChunk();
+            chunk.setDocumentId(document.getId());
+            chunk.setChunkIndex(i);
+            chunk.setContent(chunks.get(i));
+            chunk.setPositionHint("chunk-" + i);
+            chunk.setEmbedding(embeddingService.embedAsJson(chunks.get(i)));
+            chunk.setTokenCount(estimateTokens(chunks.get(i)));
+            chunk.setCreateTime(LocalDateTime.now());
+            chunkMapper.insert(chunk);
+        }
+    }
+
+    private void runPostProcessing(Long documentId) {
+        try {
+            paperAnalysisService.analyze(documentId);
+        } catch (Exception ignored) {
+            // Analysis status is stored by PaperAnalysisService.
+        }
+        try {
+            paperService.recommendForDocument(documentId);
+        } catch (Exception ignored) {
+            Document document = documentMapper.selectById(documentId);
+            if (document != null) {
+                document.setRecommendationStatus("FAILED");
+                document.setUpdateTime(LocalDateTime.now());
+                documentMapper.updateById(document);
+            }
+        }
+    }
+
+    private void updateStatuses(Document document,
+                                String parseStatus,
+                                String ocrStatus,
+                                String indexStatus,
+                                String recommendationStatus,
+                                String errorMessage) {
+        document.setParseStatus(parseStatus);
+        if (StringUtils.hasText(ocrStatus)) {
+            document.setOcrStatus(ocrStatus);
+        }
+        document.setIndexStatus(indexStatus);
+        document.setRecommendationStatus(recommendationStatus);
+        document.setErrorMessage(errorMessage);
+        document.setUpdateTime(LocalDateTime.now());
+        documentMapper.updateById(document);
     }
 
     private Path saveFile(MultipartFile file, String fileType) {
@@ -154,6 +229,31 @@ public class DocumentServiceImpl implements DocumentService {
 
     private int estimateTokens(String content) {
         return Math.max(1, content.length() / 2);
+    }
+
+    private String extractTitle(Document document, String content) {
+        return content.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .filter(line -> line.length() <= 120)
+                .findFirst()
+                .orElse(document.getTitle());
+    }
+
+    private String extractAbstract(String content) {
+        String lower = content.toLowerCase();
+        int index = lower.indexOf("abstract");
+        if (index < 0) {
+            return content.substring(0, Math.min(content.length(), 800));
+        }
+        return content.substring(index, Math.min(content.length(), index + 1000));
+    }
+
+    private String extractKeywords(String content) {
+        return content.lines()
+                .filter(line -> line.toLowerCase().contains("keywords") || line.contains("关键词"))
+                .findFirst()
+                .orElse("");
     }
 
     private String extension(String filename) {

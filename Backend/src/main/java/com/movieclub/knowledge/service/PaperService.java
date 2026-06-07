@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface PaperService {
     List<PaperRecommendation> recommend(PaperRecommendRequest request);
+
+    List<PaperRecommendation> recommendForDocument(Long documentId);
+
+    List<PaperRecommendation> listByDocument(Long documentId);
 }

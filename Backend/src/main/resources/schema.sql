@@ -6,7 +6,13 @@ CREATE TABLE IF NOT EXISTS documents (
   file_type VARCHAR(20) NOT NULL,
   file_size BIGINT NOT NULL,
   parse_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
-  summary TEXT NULL,
+  ocr_status VARCHAR(30) NOT NULL DEFAULT 'NOT_REQUIRED',
+  index_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+  analysis_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+  recommendation_status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+  abstract_text MEDIUMTEXT NULL,
+  keywords VARCHAR(1000) NULL,
+  summary MEDIUMTEXT NULL,
   error_message TEXT NULL,
   create_time DATETIME NOT NULL,
   update_time DATETIME NOT NULL,
@@ -27,6 +33,28 @@ CREATE TABLE IF NOT EXISTS document_chunks (
   INDEX idx_document_chunks_document_id (document_id),
   FULLTEXT INDEX ft_document_chunks_content (content),
   CONSTRAINT fk_chunks_document
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS paper_analysis (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  document_id BIGINT NOT NULL,
+  research_background MEDIUMTEXT NULL,
+  problem_definition MEDIUMTEXT NULL,
+  core_method MEDIUMTEXT NULL,
+  experiment_results MEDIUMTEXT NULL,
+  innovation_points MEDIUMTEXT NULL,
+  strengths MEDIUMTEXT NULL,
+  weaknesses MEDIUMTEXT NULL,
+  one_sentence_summary TEXT NULL,
+  model_name VARCHAR(100) NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+  error_message MEDIUMTEXT NULL,
+  create_time DATETIME NOT NULL,
+  update_time DATETIME NOT NULL,
+  UNIQUE KEY uk_paper_analysis_document_id (document_id),
+  CONSTRAINT fk_paper_analysis_document
     FOREIGN KEY (document_id) REFERENCES documents(id)
     ON DELETE CASCADE
 );
@@ -73,6 +101,7 @@ CREATE TABLE IF NOT EXISTS review_reports (
 
 CREATE TABLE IF NOT EXISTS paper_recommendations (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  document_id BIGINT NULL,
   source VARCHAR(50) NOT NULL,
   query_text VARCHAR(500) NOT NULL,
   title VARCHAR(500) NOT NULL,
@@ -82,5 +111,9 @@ CREATE TABLE IF NOT EXISTS paper_recommendations (
   url VARCHAR(1000) NULL,
   reason MEDIUMTEXT NULL,
   create_time DATETIME NOT NULL,
-  INDEX idx_paper_query (query_text)
+  INDEX idx_paper_document_id (document_id),
+  INDEX idx_paper_query (query_text),
+  CONSTRAINT fk_paper_recommendations_document
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+    ON DELETE CASCADE
 );

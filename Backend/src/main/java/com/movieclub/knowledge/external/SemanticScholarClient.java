@@ -3,6 +3,7 @@ package com.movieclub.knowledge.external;
 import com.movieclub.knowledge.config.KnowledgeProperties;
 import com.movieclub.knowledge.entity.PaperRecommendation;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
@@ -14,8 +15,10 @@ import java.util.stream.Collectors;
 @Component
 public class SemanticScholarClient {
     private final WebClient webClient;
+    private final KnowledgeProperties properties;
 
     public SemanticScholarClient(KnowledgeProperties properties) {
+        this.properties = properties;
         this.webClient = WebClient.builder().baseUrl(properties.getPaper().getSemanticScholarUrl()).build();
     }
 
@@ -27,6 +30,11 @@ public class SemanticScholarClient {
                         .queryParam("limit", limit)
                         .queryParam("fields", "title,authors,year,abstract,url")
                         .build())
+                .headers(headers -> {
+                    if (StringUtils.hasText(properties.getPaper().getSemanticScholarApiKey())) {
+                        headers.set("x-api-key", properties.getPaper().getSemanticScholarApiKey());
+                    }
+                })
                 .retrieve()
                 .bodyToMono(Map.class)
                 .block();

@@ -15,6 +15,12 @@ public class Document {
     private String fileType;
     private Long fileSize;
     private String parseStatus;
+    private String ocrStatus;
+    private String indexStatus;
+    private String analysisStatus;
+    private String recommendationStatus;
+    private String abstractText;
+    private String keywords;
     private String summary;
     private String errorMessage;
     private LocalDateTime createTime;

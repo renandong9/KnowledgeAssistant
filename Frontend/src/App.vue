@@ -40,72 +40,64 @@
           <section class="panel-section">
             <div class="section-head">
               <h2>文章基本信息</h2>
-              <button @click="loadDocuments">刷新</button>
+              <button @click="refreshWorkspace">刷新</button>
             </div>
             <dl class="meta-list">
-              <div>
-                <dt>文件名</dt>
-                <dd>{{ selectedDocument.originalFileName || selectedDocument.title }}</dd>
-              </div>
-              <div>
-                <dt>上传时间</dt>
-                <dd>{{ formatTime(selectedDocument.createTime) }}</dd>
-              </div>
-              <div>
-                <dt>解析状态</dt>
-                <dd><span :class="['status-pill', parseStateTone]">{{ parseStateLabel }}</span></dd>
-              </div>
-              <div>
-                <dt>OCR 状态</dt>
-                <dd><span class="status-pill muted">{{ ocrStateLabel }}</span></dd>
-              </div>
-              <div>
-                <dt>向量索引</dt>
-                <dd><span :class="['status-pill', indexStateTone]">{{ indexStateLabel }}</span></dd>
-              </div>
-              <div>
-                <dt>文件类型</dt>
-                <dd>{{ selectedDocument.fileType }}</dd>
-              </div>
+              <div><dt>文件名</dt><dd>{{ selectedDocument.originalFileName || selectedDocument.title }}</dd></div>
+              <div><dt>上传时间</dt><dd>{{ formatTime(selectedDocument.createTime) }}</dd></div>
+              <div><dt>解析状态</dt><dd><span :class="['status-pill', tone(selectedDocument.parseStatus)]">{{ label(selectedDocument.parseStatus) }}</span></dd></div>
+              <div><dt>OCR 状态</dt><dd><span :class="['status-pill', tone(selectedDocument.ocrStatus)]">{{ label(selectedDocument.ocrStatus) }}</span></dd></div>
+              <div><dt>向量索引</dt><dd><span :class="['status-pill', tone(selectedDocument.indexStatus)]">{{ label(selectedDocument.indexStatus) }}</span></dd></div>
+              <div><dt>AI 分析</dt><dd><span :class="['status-pill', tone(selectedDocument.analysisStatus)]">{{ label(selectedDocument.analysisStatus) }}</span></dd></div>
+              <div><dt>文件类型</dt><dd>{{ selectedDocument.fileType }}</dd></div>
             </dl>
           </section>
 
           <section class="panel-section">
-            <h2>AI 摘要</h2>
-            <p class="summary-text">{{ documentSummary }}</p>
-            <button @click="review" :disabled="analysisState === '分析生成中'">生成/更新分析</button>
-            <span class="status-line">{{ analysisState }}</span>
+            <h2>标题 / 摘要 / 关键词</h2>
+            <p class="summary-text"><strong>标题：</strong>{{ selectedDocument.title }}</p>
+            <p class="summary-text"><strong>摘要：</strong>{{ selectedDocument.abstractText || selectedDocument.summary || '暂无摘要' }}</p>
+            <p class="summary-text"><strong>关键词：</strong>{{ selectedDocument.keywords || '暂无关键词' }}</p>
           </section>
 
           <section class="panel-section">
-            <h2>文章结构 / 章节</h2>
+            <h2>章节结构</h2>
             <ol class="structure-list">
               <li v-for="item in structureItems" :key="item">{{ item }}</li>
             </ol>
           </section>
 
           <section class="panel-section">
-            <h2>AI 自动分析结果</h2>
-            <div v-if="reviewReport" class="analysis-grid">
-              <article>
-                <strong>总结</strong>
-                <p>{{ reviewReport.summary }}</p>
-              </article>
+            <div class="section-head">
+              <h2>AI 自动分析结果</h2>
+              <button @click="rebuildAnalysis" :disabled="analysisLoading">重新生成</button>
             </div>
-            <p v-else class="muted-text">上传解析完成后，可生成研究背景、核心方法、实验结果和优缺点分析。</p>
+            <div v-if="analysis" class="analysis-grid">
+              <article><strong>研究背景</strong><p>{{ analysis.researchBackground }}</p></article>
+              <article><strong>问题定义</strong><p>{{ analysis.problemDefinition }}</p></article>
+              <article><strong>核心方法</strong><p>{{ analysis.coreMethod }}</p></article>
+              <article><strong>实验结果</strong><p>{{ analysis.experimentResults }}</p></article>
+              <article><strong>创新点</strong><p>{{ analysis.innovationPoints }}</p></article>
+              <article><strong>优点</strong><p>{{ analysis.strengths }}</p></article>
+              <article><strong>缺点</strong><p>{{ analysis.weaknesses }}</p></article>
+              <article><strong>一句话总结</strong><p>{{ analysis.oneSentenceSummary }}</p></article>
+            </div>
+            <p v-else class="muted-text">{{ analysisLoading ? '分析生成中...' : '暂无分析结果，可点击重新生成。' }}</p>
           </section>
 
           <section class="panel-section">
             <div class="section-head">
               <h2>相关推荐论文</h2>
-              <button @click="recommendPapers">推荐</button>
+              <button @click="rebuildRecommendations" :disabled="recommendationLoading">重新推荐</button>
             </div>
             <article v-for="paper in papers" :key="paper.id || paper.url" class="paper-card">
               <strong>{{ paper.title }}</strong>
-              <p>{{ paper.abstractText }}</p>
-              <a :href="paper.url" target="_blank">查看论文</a>
+              <small>{{ paper.authors || '未知作者' }} · {{ paper.publishedYear || '未知年份' }}</small>
+              <p>{{ paper.abstractText || paper.reason }}</p>
+              <a v-if="paper.url" :href="paper.url" target="_blank">查看论文</a>
             </article>
-            <p v-if="!papers.length" class="muted-text">根据文章标题、摘要或关键词推荐相关论文。</p>
+            <p v-if="recommendationError" class="error-text">推荐服务暂不可用</p>
+            <p v-if="!papers.length && !recommendationError" class="muted-text">暂无推荐结果。</p>
           </section>
         </aside>
 
@@ -138,9 +130,7 @@
           </div>
 
           <div class="state-strip">
-            <span v-for="state in pageStates" :key="state.label" :class="['state-item', state.tone]">
-              {{ state.label }}
-            </span>
+            <span v-for="state in pageStates" :key="state.label" :class="['state-item', state.tone]">{{ state.label }}</span>
           </div>
 
           <div class="messages">
@@ -148,12 +138,16 @@
               <strong>{{ message.role === 'user' ? '我' : '助手' }}</strong>
               <p>{{ message.content }}</p>
             </article>
-            <p v-if="!chatMessages.length" class="muted-text">这个窗口还没有对话。提问时会优先围绕“{{ activeSession?.title || '默认问答' }}”检索原文 Chunk。</p>
+            <p v-if="!chatMessages.length" class="muted-text">
+              这个窗口还没有对话。提问时会优先围绕“{{ activeSession?.title || '默认问答' }}”检索当前文章。
+            </p>
           </div>
 
           <div class="ask-box">
             <textarea v-model="question" :placeholder="questionPlaceholder"></textarea>
-            <button @click="chat" :disabled="!activeSessionId || !question.trim()">提问</button>
+            <button @click="chat" :disabled="!activeSessionId || !question.trim() || chatLoading">
+              {{ chatLoading ? '思考中...' : '提问' }}
+            </button>
           </div>
 
           <section class="reference-panel">
@@ -196,8 +190,8 @@
 </template>
 
 <script setup>
-import axios from 'axios'
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { api } from './api'
 
 const documents = ref([])
 const selectedDocumentId = ref('')
@@ -207,7 +201,7 @@ const chatMessages = ref([])
 const searchQuery = ref('')
 const searchResults = ref([])
 const question = ref('')
-const reviewReport = ref(null)
+const analysis = ref(null)
 const papers = ref([])
 const creatingSession = ref(false)
 const newSessionTitle = ref('')
@@ -215,70 +209,51 @@ const showNameSuggestions = ref(false)
 const uploadState = ref('idle')
 const uploadError = ref('')
 const isDragging = ref(false)
-const analysisState = ref('待生成')
+const analysisLoading = ref(false)
+const recommendationLoading = ref(false)
+const recommendationError = ref(false)
+const chatLoading = ref(false)
 const sessionInput = ref(null)
 
-const nameSuggestions = [
-  '整体理解',
-  '研究背景',
-  '核心方法',
-  '实验结果',
-  '公式理解',
-  '创新点',
-  '优缺点',
-  '相关工作',
-  '组会汇报',
-  '我的疑问'
-]
+const nameSuggestions = ['整体理解', '研究背景', '核心方法', '实验结果', '公式理解', '创新点', '优缺点', '相关工作', '组会汇报', '我的疑问']
 
 const selectedDocument = computed(() => documents.value.find(doc => doc.id === selectedDocumentId.value))
 const activeSession = computed(() => chatSessions.value.find(session => session.id === activeSessionId.value))
 const uploadTitle = computed(() => uploadState.value === 'uploading' ? '上传中，请稍候...' : '拖入一篇论文或文章，开始智能理解')
-const questionPlaceholder = computed(() => activeSession.value ? `围绕“${activeSession.value.title}”提问，回答会尽量引用原文 Chunk` : '请先创建或选择提问窗口')
-const parseStatus = computed(() => selectedDocument.value?.parseStatus || 'PENDING')
-const parseStateLabel = computed(() => {
-  const statusMap = {
-    PENDING: '文档解析中',
-    PROCESSING: '文档解析中',
-    COMPLETED: '可提问状态',
-    FAILED: '解析失败'
-  }
-  return statusMap[parseStatus.value] || parseStatus.value
-})
-const parseStateTone = computed(() => parseStatus.value === 'FAILED' ? 'danger' : parseStatus.value === 'COMPLETED' ? 'success' : 'working')
-const ocrStateLabel = computed(() => selectedDocument.value?.ocrStatus || 'OCR 未启用 / 未触发')
-const indexStateLabel = computed(() => parseStatus.value === 'COMPLETED' ? '向量索引构建完成' : '向量索引构建中')
-const indexStateTone = computed(() => parseStatus.value === 'COMPLETED' ? 'success' : 'working')
-const documentSummary = computed(() => selectedDocument.value?.summary || reviewReport.value?.summary || '解析完成后，这里会展示 AI 生成的文章摘要。')
+const questionPlaceholder = computed(() => activeSession.value ? `围绕“${activeSession.value.title}”提问，回答会引用原文 Chunk` : '请先创建或选择提问窗口')
 const structureItems = computed(() => {
-  if (parseStatus.value !== 'COMPLETED') {
-    return ['等待文档解析完成', '等待章节结构提取', '等待 Chunk 索引构建']
-  }
+  if (selectedDocument.value?.parseStatus !== 'COMPLETED') return ['等待文档解析完成', '等待 Chunk 索引构建']
   return ['标题与摘要', '正文主要章节', '实验与结论', '参考信息']
 })
 const pageStates = computed(() => [
-  { label: uploadState.value === 'uploading' ? '文件上传中' : '文件已接收', tone: uploadState.value === 'uploading' ? 'working' : 'success' },
-  { label: parseStateLabel.value, tone: parseStateTone.value },
-  { label: ocrStateLabel.value, tone: 'muted' },
-  { label: indexStateLabel.value, tone: indexStateTone.value },
-  { label: analysisState.value === '分析生成中' ? '分析生成中' : '分析待命', tone: analysisState.value === '分析生成中' ? 'working' : 'muted' }
+  { label: label(selectedDocument.value?.parseStatus), tone: tone(selectedDocument.value?.parseStatus) },
+  { label: label(selectedDocument.value?.ocrStatus), tone: tone(selectedDocument.value?.ocrStatus) },
+  { label: label(selectedDocument.value?.indexStatus), tone: tone(selectedDocument.value?.indexStatus) },
+  { label: label(selectedDocument.value?.analysisStatus), tone: tone(selectedDocument.value?.analysisStatus) }
 ])
 
 async function loadDocuments() {
-  const { data } = await axios.get('/api/documents')
-  documents.value = data.data || []
-  if (selectedDocumentId.value) {
-    const current = documents.value.find(doc => doc.id === selectedDocumentId.value)
-    if (!current) selectedDocumentId.value = ''
-  }
+  documents.value = await api.listDocuments() || []
+  if (selectedDocumentId.value) await refreshSelectedDocument()
 }
 
 async function selectDocument(doc) {
   selectedDocumentId.value = doc.id
-  reviewReport.value = null
-  papers.value = []
   searchResults.value = []
-  await loadChatSessions()
+  await refreshWorkspace()
+}
+
+async function refreshWorkspace() {
+  await refreshSelectedDocument()
+  await Promise.all([loadAnalysis(), loadRecommendations(), loadChatSessions()])
+}
+
+async function refreshSelectedDocument() {
+  if (!selectedDocumentId.value) return
+  const detail = await api.getDocument(selectedDocumentId.value)
+  const index = documents.value.findIndex(doc => doc.id === detail.id)
+  if (index >= 0) documents.value[index] = detail
+  else documents.value.unshift(detail)
 }
 
 function handleFileInput(event) {
@@ -303,15 +278,13 @@ async function uploadDocument(file) {
   const form = new FormData()
   form.append('file', file)
   try {
-    const { data } = await axios.post('/api/documents/upload', form)
-    await loadDocuments()
-    if (data.data?.id) {
-      documents.value = [data.data, ...documents.value.filter(doc => doc.id !== data.data.id)]
-      await selectDocument(data.data)
-    }
+    const doc = await api.uploadDocument(form)
+    documents.value = [doc, ...documents.value.filter(item => item.id !== doc.id)]
+    selectedDocumentId.value = doc.id
     uploadState.value = 'done'
+    await refreshWorkspace()
   } catch (error) {
-    uploadError.value = error.response?.data?.message || '上传失败，请稍后重试。'
+    uploadError.value = error.message || '上传失败，请稍后重试。'
     uploadState.value = 'idle'
   }
 }
@@ -320,10 +293,46 @@ function isSupportedFile(file) {
   return /\.(pdf|docx|txt|md|markdown)$/i.test(file.name)
 }
 
+async function loadAnalysis() {
+  analysis.value = await api.getAnalysis(selectedDocumentId.value)
+}
+
+async function rebuildAnalysis() {
+  analysisLoading.value = true
+  try {
+    analysis.value = await api.rebuildAnalysis(selectedDocumentId.value)
+    await refreshSelectedDocument()
+  } finally {
+    analysisLoading.value = false
+  }
+}
+
+async function loadRecommendations() {
+  recommendationError.value = false
+  try {
+    papers.value = await api.listRecommendations(selectedDocumentId.value) || []
+  } catch {
+    recommendationError.value = true
+    papers.value = []
+  }
+}
+
+async function rebuildRecommendations() {
+  recommendationLoading.value = true
+  recommendationError.value = false
+  try {
+    papers.value = await api.rebuildRecommendations(selectedDocumentId.value) || []
+    await refreshSelectedDocument()
+    if (!papers.value.length) recommendationError.value = true
+  } catch {
+    recommendationError.value = true
+  } finally {
+    recommendationLoading.value = false
+  }
+}
+
 async function loadChatSessions() {
-  if (!selectedDocumentId.value) return
-  const { data } = await axios.get(`/api/documents/${selectedDocumentId.value}/chat-sessions`)
-  chatSessions.value = data.data || []
+  chatSessions.value = await api.listChatSessions(selectedDocumentId.value) || []
   activeSessionId.value = chatSessions.value[0]?.id || ''
   await loadMessages()
 }
@@ -336,10 +345,7 @@ async function selectSession(sessionId) {
 }
 
 async function loadMessages() {
-  chatMessages.value = []
-  if (!activeSessionId.value) return
-  const { data } = await axios.get(`/api/chat-sessions/${activeSessionId.value}/messages`)
-  chatMessages.value = data.data || []
+  chatMessages.value = activeSessionId.value ? await api.listMessages(activeSessionId.value) || [] : []
 }
 
 async function openCreateSession() {
@@ -359,13 +365,10 @@ function applySuggestion(suggestion) {
 }
 
 async function createSession() {
-  const { data } = await axios.post(`/api/documents/${selectedDocumentId.value}/chat-sessions`, {
-    title: newSessionTitle.value,
-    type: 'custom'
-  })
+  const session = await api.createChatSession(selectedDocumentId.value, { title: newSessionTitle.value, type: 'custom' })
   creatingSession.value = false
   await loadChatSessions()
-  activeSessionId.value = data.data?.id || activeSessionId.value
+  activeSessionId.value = session?.id || activeSessionId.value
   await loadMessages()
 }
 
@@ -373,61 +376,64 @@ async function renameSession() {
   if (!activeSession.value) return
   const title = window.prompt('新的窗口名称', activeSession.value.title)
   if (!title?.trim()) return
-  await axios.put(`/api/chat-sessions/${activeSession.value.id}`, {
-    title,
-    type: activeSession.value.type || 'custom'
-  })
+  await api.updateChatSession(activeSession.value.id, { title, type: activeSession.value.type || 'custom' })
   await loadChatSessions()
 }
 
 async function deleteSession() {
   if (!activeSession.value) return
   if (!window.confirm(`删除提问窗口“${activeSession.value.title}”？`)) return
-  await axios.delete(`/api/chat-sessions/${activeSession.value.id}`)
+  await api.deleteChatSession(activeSession.value.id)
   await loadChatSessions()
 }
 
 async function search() {
   if (!searchQuery.value.trim()) return
-  const { data } = await axios.post('/api/search', {
+  searchResults.value = await api.search({
     documentId: selectedDocumentId.value,
     query: searchQuery.value,
     topic: activeSession.value?.title,
     limit: 8
-  })
-  searchResults.value = data.data || []
+  }) || []
 }
 
 async function chat() {
-  const text = question.value
+  const text = question.value.trim()
+  if (!text) return
   question.value = ''
-  const { data } = await axios.post('/api/chat', {
-    documentId: selectedDocumentId.value,
-    sessionId: activeSessionId.value,
-    question: text,
-    limit: 6
-  })
-  await loadMessages()
-  if (data.data?.references?.length) {
-    searchResults.value = data.data.references
-  }
-}
-
-async function review() {
-  analysisState.value = '分析生成中'
+  chatLoading.value = true
   try {
-    const { data } = await axios.post('/api/review/summary', { documentId: Number(selectedDocumentId.value) })
-    reviewReport.value = data.data
-    analysisState.value = '分析已生成'
-  } catch (error) {
-    analysisState.value = '分析生成失败'
+    const data = await api.chat({
+      documentId: selectedDocumentId.value,
+      sessionId: activeSessionId.value,
+      question: text,
+      limit: 6
+    })
+    await loadMessages()
+    if (data?.references?.length) searchResults.value = data.references
+  } finally {
+    chatLoading.value = false
   }
 }
 
-async function recommendPapers() {
-  const query = [selectedDocument.value?.title, selectedDocument.value?.summary].filter(Boolean).join(' ')
-  const { data } = await axios.post('/api/papers/recommend', { query, limit: 5 })
-  papers.value = data.data || []
+function label(status) {
+  const map = {
+    PENDING: '等待中',
+    PROCESSING: '处理中',
+    COMPLETED: '已完成',
+    FAILED: '失败',
+    SKIPPED: '已跳过',
+    NOT_REQUIRED: '无需 OCR',
+    UNAVAILABLE: '服务暂不可用'
+  }
+  return map[status] || status || '未知'
+}
+
+function tone(status) {
+  if (status === 'COMPLETED' || status === 'NOT_REQUIRED') return 'success'
+  if (status === 'FAILED' || status === 'UNAVAILABLE') return 'danger'
+  if (status === 'PROCESSING' || status === 'PENDING') return 'working'
+  return 'muted'
 }
 
 function formatTime(value) {
