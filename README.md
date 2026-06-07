@@ -22,7 +22,7 @@ Knowledge Assistant 是一个个人知识库助手项目，用于上传和解析
 - Redis
 - PDFBox
 - Apache POI
-- DeepSeek Chat API
+- Ollama
 
 ### Frontend
 
@@ -75,10 +75,11 @@ mysql -u root -p knowledge_assistant < Backend/src/main/resources/schema.sql
 ```bash
 MYSQL_USERNAME=root
 MYSQL_PASSWORD=your_mysql_password
-DEEPSEEK_API_KEY=your_deepseek_api_key
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=deepseek-r1:1.5b
 ```
 
-如果没有配置 `DEEPSEEK_API_KEY`，系统仍可完成文档上传、解析和检索，但 AI 问答会返回提示信息。
+默认使用本地 Ollama，不需要 API Key。请先确认 Ollama 已启动，并且本地已拉取 `deepseek-r1:1.5b` 模型。
 
 ## 启动后端
 
@@ -114,6 +115,7 @@ http://localhost:5173
 - `GET /api/documents`
 - `GET /api/documents/{id}`
 - `DELETE /api/documents/{id}`
+- `POST /api/ai/chat`
 - `POST /api/search`
 - `POST /api/chat`
 - `POST /api/review/summary`

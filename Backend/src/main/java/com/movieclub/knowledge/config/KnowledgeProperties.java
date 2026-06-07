@@ -9,15 +9,13 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "knowledge")
 public class KnowledgeProperties {
     private String storageDir;
-    private DeepSeek deepseek = new DeepSeek();
+    private Ollama ollama = new Ollama();
     private Paper paper = new Paper();
 
     @Data
-    public static class DeepSeek {
-        private String apiKey;
+    public static class Ollama {
         private String baseUrl;
-        private String chatModel;
-        private String embeddingModel;
+        private String model;
     }
 
     @Data

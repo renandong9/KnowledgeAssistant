@@ -1,7 +1,7 @@
 package com.movieclub.knowledge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.movieclub.knowledge.ai.DeepSeekChatService;
+import com.movieclub.knowledge.ai.AiChatService;
 import com.movieclub.knowledge.common.BusinessException;
 import com.movieclub.knowledge.dto.ReviewRequest;
 import com.movieclub.knowledge.entity.Document;
@@ -21,12 +21,12 @@ public class ReviewServiceImpl implements ReviewService {
     private final DocumentMapper documentMapper;
     private final DocumentChunkMapper chunkMapper;
     private final ReviewReportMapper reportMapper;
-    private final DeepSeekChatService chatService;
+    private final AiChatService chatService;
 
     public ReviewServiceImpl(DocumentMapper documentMapper,
                              DocumentChunkMapper chunkMapper,
                              ReviewReportMapper reportMapper,
-                             DeepSeekChatService chatService) {
+                             AiChatService chatService) {
         this.documentMapper = documentMapper;
         this.chunkMapper = chunkMapper;
         this.reportMapper = reportMapper;
