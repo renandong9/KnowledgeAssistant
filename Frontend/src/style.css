@@ -14,7 +14,13 @@ button,
   background: #172026;
   color: white;
   cursor: pointer;
+  font: inherit;
   padding: 10px 14px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 input,
@@ -27,20 +33,28 @@ textarea {
 }
 
 textarea {
-  min-height: 120px;
+  min-height: 110px;
   resize: vertical;
 }
 
 .shell {
   margin: 0 auto;
-  max-width: 1180px;
+  max-width: 1280px;
   padding: 32px;
 }
 
-.toolbar {
+.toolbar,
+.panel-head,
+.document-head,
+.session-actions,
+.modal-actions {
   align-items: center;
   display: flex;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.toolbar {
   margin-bottom: 24px;
 }
 
@@ -48,6 +62,11 @@ textarea {
   color: #68746a;
   font-size: 13px;
   margin: 0 0 6px;
+}
+
+.muted {
+  color: #68746a;
+  margin: 6px 0 0;
 }
 
 h1,
@@ -62,7 +81,7 @@ h2 {
 .grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 320px minmax(0, 1fr);
 }
 
 .panel {
@@ -87,27 +106,75 @@ h2 {
 
 .doc.active {
   border-color: #172026;
+  box-shadow: inset 3px 0 0 #477a5b;
 }
 
-.tabs {
+.workbench {
+  display: grid;
+  gap: 18px;
+}
+
+.chat-zone,
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.session-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 18px;
 }
 
-.tabs button {
+.session-tab {
   background: white;
   color: #172026;
 }
 
-.tabs button.active {
+.session-tab.active {
   background: #172026;
   color: white;
 }
 
-.stack {
+.session-actions {
+  border-bottom: 1px solid #dde4d9;
+  padding-bottom: 12px;
+}
+
+.session-actions div,
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.messages {
+  border: 1px solid #dde4d9;
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  max-height: 380px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.message {
+  background: #f8faf7;
+  border-left: 3px solid #477a5b;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.message.user {
+  background: #eef4f8;
+  border-left-color: #335f7a;
+}
+
+.message p {
+  margin: 8px 0 0;
+}
+
+.ask-box {
+  display: grid;
+  gap: 10px;
 }
 
 .result,
@@ -124,22 +191,60 @@ h2 {
   overflow: auto;
 }
 
-@media (max-width: 760px) {
+.empty {
+  min-height: 360px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgb(23 32 38 / 0.35);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 10;
+}
+
+.modal {
+  background: white;
+  border: 1px solid #dde4d9;
+  display: grid;
+  gap: 14px;
+  max-width: 520px;
+  padding: 22px;
+  width: min(520px, calc(100vw - 32px));
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestions button {
+  background: white;
+  color: #172026;
+}
+
+@media (max-width: 860px) {
   .shell {
     padding: 18px;
   }
 
   .toolbar,
-  .grid {
+  .grid,
+  .document-head,
+  .session-actions {
     display: block;
   }
 
-  .upload {
-    display: inline-block;
-    margin-top: 16px;
-  }
-
-  .workbench {
-    margin-top: 16px;
+  .upload,
+  .workbench,
+  .session-actions div {
+    margin-top: 14px;
   }
 }

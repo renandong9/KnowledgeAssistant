@@ -4,10 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class ChatRequest {
+public class ChatSessionCreateRequest {
     private Long documentId;
-    private Long sessionId;
     @NotBlank
-    private String question;
-    private Integer limit = 6;
+    private String title;
+    private String type = "custom";
 }

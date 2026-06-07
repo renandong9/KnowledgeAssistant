@@ -31,37 +31,61 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public List<SearchResult> search(SearchRequest request) {
         int limit = request.getLimit() == null ? 8 : request.getLimit();
-        List<DocumentChunk> candidates = chunkMapper.selectList(new LambdaQueryWrapper<DocumentChunk>()
-                .like(DocumentChunk::getContent, request.getQuery())
-                .last("LIMIT 50"));
+        String queryText = buildQueryText(request);
+        List<DocumentChunk> candidates = selectKeywordCandidates(request);
         if (candidates.size() < limit) {
-            candidates = chunkMapper.selectList(new LambdaQueryWrapper<DocumentChunk>().last("LIMIT 200"));
+            candidates = selectFallbackCandidates(request);
         }
         if (candidates.isEmpty()) {
             return List.of();
         }
-        double[] queryVector = embeddingService.embed(request.getQuery());
+        double[] queryVector = embeddingService.embed(queryText);
         Map<Long, Document> documents = documentMapper.selectBatchIds(
                         candidates.stream().map(DocumentChunk::getDocumentId).collect(Collectors.toSet()))
                 .stream()
                 .collect(Collectors.toMap(Document::getId, document -> document));
         return candidates.stream()
-                .map(chunk -> toResult(chunk, documents.get(chunk.getDocumentId()), queryVector))
+                .map(chunk -> toResult(chunk, documents.get(chunk.getDocumentId()), queryVector, request.getTopic()))
                 .sorted(Comparator.comparing(SearchResult::getScore).reversed())
                 .limit(limit)
                 .toList();
     }
 
-    private SearchResult toResult(DocumentChunk chunk, Document document, double[] queryVector) {
+    private List<DocumentChunk> selectKeywordCandidates(SearchRequest request) {
+        LambdaQueryWrapper<DocumentChunk> wrapper = new LambdaQueryWrapper<DocumentChunk>()
+                .like(DocumentChunk::getContent, request.getQuery());
+        if (request.getDocumentId() != null) {
+            wrapper.eq(DocumentChunk::getDocumentId, request.getDocumentId());
+        }
+        return chunkMapper.selectList(wrapper.last("LIMIT 50"));
+    }
+
+    private List<DocumentChunk> selectFallbackCandidates(SearchRequest request) {
+        LambdaQueryWrapper<DocumentChunk> wrapper = new LambdaQueryWrapper<>();
+        if (request.getDocumentId() != null) {
+            wrapper.eq(DocumentChunk::getDocumentId, request.getDocumentId());
+        }
+        return chunkMapper.selectList(wrapper.last("LIMIT 200"));
+    }
+
+    private SearchResult toResult(DocumentChunk chunk, Document document, double[] queryVector, String topic) {
         double vectorScore = embeddingService.cosine(queryVector, embeddingService.readEmbedding(chunk.getEmbedding()));
-        double keywordBoost = chunk.getContent().contains(document == null ? "" : document.getTitle()) ? 0.05 : 0.0;
+        double keywordBoost = document != null && chunk.getContent().contains(document.getTitle()) ? 0.05 : 0.0;
+        double topicBoost = topic != null && !topic.isBlank() && chunk.getContent().contains(topic) ? 0.1 : 0.0;
         return new SearchResult(
                 chunk.getDocumentId(),
                 chunk.getId(),
                 document == null ? "未知文档" : document.getTitle(),
                 chunk.getContent(),
                 chunk.getPageNumber(),
-                vectorScore + keywordBoost
+                vectorScore + keywordBoost + topicBoost
         );
+    }
+
+    private String buildQueryText(SearchRequest request) {
+        if (request.getTopic() == null || request.getTopic().isBlank()) {
+            return request.getQuery();
+        }
+        return request.getTopic() + "\n" + request.getQuery();
     }
 }

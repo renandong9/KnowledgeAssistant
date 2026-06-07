@@ -33,10 +33,16 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  document_id BIGINT NULL,
   title VARCHAR(255) NOT NULL,
+  `type` VARCHAR(100) NULL,
   create_time DATETIME NOT NULL,
   update_time DATETIME NOT NULL,
-  INDEX idx_chat_sessions_update_time (update_time)
+  INDEX idx_chat_sessions_document_id (document_id),
+  INDEX idx_chat_sessions_update_time (update_time),
+  CONSTRAINT fk_chat_sessions_document
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+    ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS chat_messages (

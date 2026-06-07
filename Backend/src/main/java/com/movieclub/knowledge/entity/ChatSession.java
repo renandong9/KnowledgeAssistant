@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 @TableName("chat_sessions")
 public class ChatSession {
     private Long id;
+    private Long documentId;
     private String title;
+    private String type;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }
